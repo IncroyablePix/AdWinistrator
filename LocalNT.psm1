@@ -1,4 +1,4 @@
-﻿Function Add-LocalGroupNTUser() {
+Function Add-LocalGroupNTUser() {
 	Param (
 		[Parameter(Mandatory=$true, Position=0)]
 		[string] $UserName,
