@@ -48,7 +48,9 @@ Function Add-GlobalUser() {
         [Parameter(Mandatory=$false, Position=8)]
         [string] $ProfileName,
         [Parameter(Mandatory=$false, Position=9)]
-        [string] $LocalDirectory
+        [string] $LocalDirectory,
+        [Parameter(Mandatory=$false, Position=10)]
+        [string] $FullName
     )
 
     if(!($Directory)) {
@@ -63,13 +65,19 @@ Function Add-GlobalUser() {
         $ProfileName = "ntprof"
     }
 
-    $full_name = "$FirstName $LastName"
+    $full_name = "";
+    if(!($FullName)) {
+        $full_name = "$FirstName $LastName"
+    }
+    else {
+        $full_name = $FullName
+    }
 
     $splits = $DC.Split(".")
     $dcs = ($splits | % { "DC=" + $_}) -join ","
     $path = "OU=$($OU),$($dcs)"
 
-    Write-Output -path
+    #Write-Output -path
     #New-ADUser -Name $full_name -AccountPassword (ConvertTo-SecureString -AsPlainText $Password -Force) -Enabled $true -PasswordNeverExpires $true -CannotChangePassword $true -SamAccountName $SamAccount -UserPrincipalName "$($SamName)@$($DC)" -Path $path -GivenName $FirstName -Surname $LastName -DisplayName $full_name
     $user = New-ADUser -Name "$($FirstName) $($LastName)" -AccountPassword (ConvertTo-SecureString -AsPlainText "$($Password)" -Force) `
         -Enabled $true -PasswordNeverExpires $true -CannotChangePassword $true -SamAccountName "$($SamName)" -UserPrincipalName "$($Name)@$($DC)" `
@@ -83,8 +91,8 @@ Function Add-GlobalUser() {
 
     # ADSI
     $userADSI = [ADSI] "WinNT://$($env:computername)/$($Name)"
-    $userADSI.Profile = $local_profile_dir
-    $userADSI.HomeDirectory = $home_dir
+    $userADSI.Profile = $profile_dir
+    $userADSI.HomeDirectory = $local_home_dir
     $userADSI.SetInfo()
 
     #
@@ -99,7 +107,24 @@ Function Add-GlobalUser() {
 
     # Giving full access to user directories
     &"icacls" "$($local_profile_dir).V6" "/grant" "$($Name):(OI)(CI)(F)"
-    &"icacls" "$($local_home_dir)" "/grant" "$($Name):(F)"
+    &"icacls" "$($profile_dir).V6" "/grant" "$($Name):(OI)(CI)(F)"
+    &"icacls" "$($local_home_dir)" "/grant" "$($Name):(OI)(CI)(F)"
+    &"icacls" "$($home_dir)" "/grant" "$($Name):(OI)(CI)(F)"
+}
+
+Function Set-GlobalUser() {
+    Param (
+        [Parameter(Mandatory=$true, Position=0)]
+        [string] $Name,
+        [Parameter(Mandatory=$true, Position=1)]
+        [string] $ProfilePath
+    )
+
+    
+    # ADSI
+    $userADSI = [ADSI] "WinNT://$($env:computername)/$($Name)"
+    $userADSI.Profile = $ProfilePath
+    $userADSI.SetInfo()
 }
 
 Function Add-GlobalGroupUser() {
@@ -135,7 +160,7 @@ Function Add-GlobalGroupUser() {
     $path = "CN=$($GroupName),OU=$($OUGroup),$($dcs)"
 
     $member = "CN=$($GivenName),OU=$($OU),$($dcs)"
-    Write-Output $path $member
+    #Write-Output $path $member
     
 	Add-ADGroupMember $path -Members $member
 }
