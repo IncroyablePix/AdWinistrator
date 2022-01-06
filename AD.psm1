@@ -208,6 +208,10 @@ Function Add-Computer() {
     New-ADComputer -Name $ComputerName -SAMAccountName $SamName -Path $path
 }
 
+Function Add-ADSnapshot() {
+	Invoke-Expression -Command:'ntdsutil snapshot "activate instance ntds" create quit quit'
+}
+
 Export-ModuleMember -Function Add-OrganizationalUnit
 Export-ModuleMember -Function Add-GlobalUser
 Export-ModuleMember -Function Add-GlobalGroupUser
